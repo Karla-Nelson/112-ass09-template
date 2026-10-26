@@ -35,8 +35,24 @@
 int *alloc_ints(size_t count)
 {
     // TODO
+
+    if(count == 0)
+    {
+        return NULL;
+    }
+
     (void)count;
-    return NULL;
+    
+
+    int * temp = malloc(sizeof(int) * count);
+
+    if(temp == NULL)
+    {
+        return NULL;
+    }
+
+    return temp;
+
 }
 
 /*
@@ -49,8 +65,23 @@ int *alloc_ints(size_t count)
 int *alloc_zeroed_ints(size_t count)
 {
     // TODO
+    int * temp;
+
+    if(count == 0)
+    {
+        return NULL;
+    }
+
     (void)count;
-    return NULL;
+    
+    temp = (int *)calloc(count, sizeof(int));
+
+    if(temp == NULL)
+    {
+        return NULL;
+    }
+
+    return temp;
 }
 
 /*
@@ -67,6 +98,18 @@ void safe_free(void **ptr)
 {
     // TODO
     (void)ptr;
+
+    if(*ptr != NULL)
+    {
+        free(*ptr);
+        *ptr = NULL; 
+    }
+
+    else
+    {
+        return;
+    }
+
 }
 
 /*
@@ -88,7 +131,34 @@ int *resize_ints(int *arr, size_t old_count, size_t new_count)
     (void)arr;
     (void)old_count;
     (void)new_count;
-    return NULL;
+    
+    if(new_count == 0)
+    {
+        free(arr);
+        return NULL;
+    }
+
+    if(arr == NULL)
+    {
+        return alloc_zeroed_ints(new_count);
+    }
+
+    int * temp = realloc(arr, new_count * sizeof(int));
+
+    if(temp == NULL)
+    {
+        return NULL;
+    }
+
+    if(new_count > old_count)
+    {
+        memset(temp + old_count, 0, sizeof(int) * ((size_t)(new_count - old_count)));
+    }
+
+    return temp;
+
+
+
 }
 
 /*
