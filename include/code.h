@@ -3,7 +3,7 @@
 
 /*
  * CSCI 112 Assignment 9 - Dynamic Memory and Memory Functions
- *
+ * 
  * This header is complete: it contains the ByteBuffer type and the prototypes
  * of all 22 functions. Do NOT change any signature - the automated tests
  * rely on them. You implement the functions in code.c.

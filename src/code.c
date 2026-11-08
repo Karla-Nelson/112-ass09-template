@@ -4,7 +4,7 @@
 
 /*
  * CSCI 112 Assignment 9 - Dynamic Memory and Memory Functions
- * 
+ *  
  * Every function below is a skeleton that already compiles. Replace the
  * "// TODO" line (and the "(void)..." lines under it, which only silence
  * "unused parameter" warnings) with your implementation.
@@ -174,7 +174,22 @@ int *duplicate_ints(const int *src, size_t count)
     // TODO
     (void)src;
     (void)count;
-    return NULL;
+
+    if (src == NULL || count == 0) 
+    {
+        return NULL;
+    }
+
+    int *dest = malloc(count * sizeof(int));
+    
+    if (dest == NULL) 
+    {
+        return NULL;
+    }
+
+    memcpy(dest, src, count * sizeof(int));
+
+    return dest;
 }
 
 /* ======================================================================
@@ -199,8 +214,35 @@ ByteBuffer *buffer_create(size_t capacity)
 {
     // TODO
     (void)capacity;
-    return NULL;
+    
+    if (capacity == 0) 
+    {
+        return NULL;
+    }
+
+   
+    ByteBuffer *buffer = (ByteBuffer *)malloc(sizeof(ByteBuffer));
+    if (buffer == NULL) 
+    {
+        return NULL;
+    }
+
+    buffer->data = (char *)malloc(capacity);
+
+    if (buffer->data == NULL) 
+    {
+        free(buffer);
+        return NULL;
+    }
+
+    memset(buffer->data, 0, capacity);
+
+    buffer->size = 0;
+    buffer->capacity = capacity;
+
+    return buffer;
 }
+
 
 /*
  * STEP 7: buffer_reserve
@@ -219,7 +261,43 @@ bool buffer_reserve(ByteBuffer *buf, size_t min_capacity)
     // TODO
     (void)buf;
     (void)min_capacity;
-    return false;
+    
+    if (buf == NULL) 
+    {
+        return false;
+    }
+
+
+    if (min_capacity <= buf->capacity) 
+    {
+        return true;
+    }
+
+    size_t new_capacity = buf->capacity;
+    
+    if (new_capacity == 0) 
+    {
+        new_capacity = 4; 
+    }
+
+    while (new_capacity < min_capacity) 
+    {
+        new_capacity *= 2;
+    }
+
+    int *temp = realloc(buf->data, new_capacity);
+    
+    if (temp == NULL) 
+    {
+        return false;
+    }
+
+    memset(temp + buf->capacity, 0, new_capacity - buf->capacity);
+
+    buf->data = temp;
+    buf->capacity = new_capacity;
+
+    return true;
 }
 
 /*
@@ -238,7 +316,30 @@ bool buffer_append(ByteBuffer *buf, const void *data, size_t n)
     (void)buf;
     (void)data;
     (void)n;
-    return false;
+
+    if (n == 0) 
+    {
+        return true;
+    }
+
+    if (buf == NULL || data == NULL) 
+    {
+        return false;
+    }
+
+    
+    if (!buffer_reserve(buf, buf->size + n)) 
+    {
+        return false;
+    }
+
+    memcpy(buf->data + buf->size, data, n);
+
+    buf->size += n;
+
+    return true;
+    
+    
 }
 
 /*
@@ -252,7 +353,9 @@ bool buffer_append_byte(ByteBuffer *buf, unsigned char byte)
     // TODO
     (void)buf;
     (void)byte;
-    return false;
+
+    return buffer_append(buf, &byte, 1);
+    
 }
 
 /*
@@ -269,7 +372,28 @@ bool buffer_append_string(ByteBuffer *buf, const char *str)
     // TODO
     (void)buf;
     (void)str;
-    return false;
+    
+    if (strlen(str) == 0) 
+    {
+        return true;
+    }
+
+    if (buf == NULL || str == NULL) 
+    {
+        return false;
+    }
+
+    
+    if (!buffer_reserve(buf, buf->size + strlen(str))) 
+    {
+        return false;
+    }
+
+    memcpy(buf->data + buf->size, str, strlen(str));
+
+    buf->size += strlen(str);
+
+    return true;
 }
 
 /*
@@ -286,8 +410,22 @@ int buffer_find(const ByteBuffer *buf, unsigned char byte)
     // TODO
     (void)buf;
     (void)byte;
+    
+    if (buf == NULL || buf->data == NULL || buf->size == 0) 
+    {
+        return -1;
+    }
+
+    void *found = memchr(buf->data, byte, buf->size);
+
+    if (found != NULL) 
+    {
+        return (int)((unsigned char *)found - buf->data);
+    }
+
     return -1;
 }
+
 
 /*
  * STEP 12: buffer_equals
@@ -302,7 +440,23 @@ bool buffer_equals(const ByteBuffer *a, const ByteBuffer *b)
     // TODO
     (void)a;
     (void)b;
-    return false;
+    
+    if (a == NULL || b == NULL) 
+    {
+        return false;
+    }
+
+    if (a->size == 0 && b->size == 0) 
+    {
+        return true;
+    }
+
+    if (a->size != b->size) 
+    {
+        return false;
+    }
+
+    return memcmp(a->data, b->data, a->size) == 0;
 }
 
 /*
@@ -325,7 +479,47 @@ bool buffer_insert(ByteBuffer *buf, size_t pos, const void *data, size_t n)
     (void)pos;
     (void)data;
     (void)n;
-    return false;
+    
+    if (buf == NULL) 
+    {
+        return false;
+    }
+
+    if (pos > buf->size) 
+    {
+        return false;
+    }
+
+    if (data == NULL && n > 0) 
+    {
+        return false;
+    }
+
+    if (n == 0) 
+    {
+        return true;
+    }
+
+    if (!buffer_reserve(buf, buf->size + n)) 
+    {
+        return false;
+    }
+
+    // 4. Shift the existing trailing bytes to the right
+    // Use memmove because the source and destination regions overlap
+    size_t bytes_to_move = buf->size - pos;
+    if (bytes_to_move > 0) 
+    {
+        memmove(buf->data + pos + n, buf->data + pos, bytes_to_move);
+    }
+
+    // 5. Copy the new data into the insertion gap
+    memcpy(buf->data + pos, data, n);
+
+    // 6. Update the buffer size
+    buf->size += n;
+
+    return true;
 }
 
 /*
@@ -345,7 +539,44 @@ bool buffer_remove(ByteBuffer *buf, size_t pos, size_t n)
     (void)buf;
     (void)pos;
     (void)n;
-    return false;
+    
+    if (buf == NULL) 
+    {
+        return false;
+    }
+
+    if (pos > buf->size) 
+    {
+        return false;
+    }
+
+    if (pos + n > buf->size) 
+    {
+        return false;
+    }
+
+    if (n > buf->size - pos) 
+    {
+        return false;
+    }
+
+    if (n == 0) 
+    {
+        return true;
+    }
+
+    size_t bytes_to_move = buf->size - (pos + n);
+    if (bytes_to_move > 0) 
+    {
+        memmove(buf->data + pos, buf->data + pos + n, bytes_to_move);
+    }
+
+    buf->size -= n;
+
+    memset(buf->data + buf->size, 0, n);
+
+    return true;
+
 }
 
 /*
@@ -359,6 +590,15 @@ void buffer_clear(ByteBuffer *buf)
 {
     // TODO
     (void)buf;
+
+    if(buf == NULL || buf->size == 0 || buf->data == NULL)
+    {
+        return;
+    }
+
+    memset(buf->data, 0, buf->size);
+
+    return true;
 }
 
 /*
@@ -374,6 +614,17 @@ void buffer_destroy(ByteBuffer **buf)
 {
     // TODO
     (void)buf;
+
+    if(*buf != NULL)
+    {
+        free(*buf);
+        *buf = NULL; 
+    }
+
+    else
+    {
+        return;
+    }
 }
 
 /* ======================================================================
@@ -394,7 +645,27 @@ ByteBuffer *buffer_clone(const ByteBuffer *src)
 {
     // TODO
     (void)src;
-    return NULL;
+    
+    if (src == NULL) 
+    {
+        return NULL;
+    }
+
+    
+    ByteBuffer *clone = buffer_create(src->capacity);
+    if (clone == NULL) 
+    {
+        return NULL;
+    }
+
+    if (src->size > 0 && src->data != NULL) 
+    {
+        memcpy(clone->data, src->data, src->size);
+    }
+
+    clone->size = src->size;
+
+    return clone;
 }
 
 /*
@@ -412,7 +683,43 @@ ByteBuffer *buffer_concat(const ByteBuffer *a, const ByteBuffer *b)
     // TODO
     (void)a;
     (void)b;
-    return NULL;
+
+    if (a == NULL || b == NULL) {
+        return NULL;
+    }
+
+    size_t target_capacity = a->size + b->size;
+    if (target_capacity == 0) 
+    {
+        target_capacity = 1;
+    }
+
+    // Create the NEW buffer
+    ByteBuffer *new_buf = buffer_create(target_capacity);
+    if (new_buf == NULL) 
+    {
+        return NULL;
+    }
+
+    if (a->size > 0) 
+    {
+        if (!buffer_append(new_buf, a->data, a->size)) 
+        {
+            buffer_free(new_buf);
+            return NULL;
+        }
+    }
+
+    if (b->size > 0) 
+    {
+        if (!buffer_append(new_buf, b->data, b->size)) 
+        {
+            buffer_free(new_buf);
+            return NULL;
+        }
+    }
+
+    return new_buf;
 }
 
 /*
@@ -428,7 +735,33 @@ size_t buffer_count(const ByteBuffer *buf, unsigned char byte)
     // TODO
     (void)buf;
     (void)byte;
-    return 0;
+    
+    if (buf == NULL || buf->data == NULL || buf->size == 0) 
+    {
+        return 0;
+    }
+
+    size_t count = 0;
+    const unsigned char *current_pos = buf->data;
+    size_t bytes_remaining = buf->size;
+
+    while (bytes_remaining > 0) 
+    {
+        const unsigned char *match = memchr(current_pos, byte, bytes_remaining);
+        
+        if (match == NULL) 
+        {
+            break;
+        }
+
+        count++;
+        
+        size_t bytes_searched = (size_t)(match - current_pos) + 1;
+        current_pos = match + 1;
+        bytes_remaining -= bytes_searched;
+    }
+
+    return count;
 }
 
 /*
@@ -445,7 +778,30 @@ bool buffer_shrink_to_fit(ByteBuffer *buf)
 {
     // TODO
     (void)buf;
-    return false;
+    
+    if (buf == NULL) 
+    {
+        return false;
+    }
+
+    size_t target_capacity = buf->size > 0 ? buf->size : 1;
+
+    if (buf->capacity == target_capacity) 
+    {
+        return true;
+    }
+
+
+    unsigned char *temp = realloc(buf->data, target_capacity);
+    if (temp == NULL) 
+    {
+        return false;
+    }
+
+    buf->data = temp;
+    buf->capacity = target_capacity;
+
+    return true;
 }
 
 /*
@@ -475,6 +831,83 @@ char **buffer_split(const ByteBuffer *buf, unsigned char delim, size_t *out_coun
     (void)buf;
     (void)delim;
     (void)out_count;
+    
+    if (out_count != NULL) 
+    {
+        *out_count = 0;
+    }
+    if (buf == NULL || out_count == NULL) 
+    {
+        return NULL;
+    }
+
+    size_t capacity = 4;
+    char **tokens = malloc(capacity * sizeof(char *));
+    if (tokens == NULL) 
+    {
+        return NULL;
+    }
+
+    size_t count = 0;
+    size_t current_pos = 0;
+
+    while (1) 
+    {
+        if (count >= capacity) 
+        {
+            size_t new_capacity = capacity * 2;
+            char **new_tokens = realloc(tokens, new_capacity * sizeof(char *));
+            if (new_tokens == NULL) {
+                goto cleanup;
+            }
+            tokens = new_tokens;
+            capacity = new_capacity;
+        }
+
+        unsigned char *start_ptr = (unsigned char *)buf->data + current_pos;
+        size_t search_len = buf->size - current_pos;
+        unsigned char *delim_ptr = NULL;
+
+        if (search_len > 0) 
+        {
+            delim_ptr = memchr(start_ptr, delim, search_len);
+        }
+
+        size_t token_len = delim_ptr ? (size_t)(delim_ptr - start_ptr) : search_len;
+
+        tokens[count] = malloc(token_len + 1);
+        if (tokens[count] == NULL) 
+        {
+            goto cleanup;
+        }
+
+        if (token_len > 0) 
+        {
+            memcpy(tokens[count], start_ptr, token_len);
+        }
+
+        tokens[count][token_len] = '\0';
+        count++;
+
+        if (!delim_ptr) 
+        {
+            break;
+        }
+
+        current_pos += token_len + 1;
+    }
+
+    *out_count = count;
+    return tokens;
+
+cleanup:
+
+    for (size_t i = 0; i < count; i++) 
+    {
+        free(tokens[i]);
+    }
+
+    free(tokens);
     return NULL;
 }
 
@@ -492,4 +925,19 @@ void free_tokens(char ***tokens, size_t count)
     // TODO
     (void)tokens;
     (void)count;
+
+    if (tokens == NULL || *tokens == NULL) 
+    {
+        return;
+    }
+
+    for (size_t i = 0; i < count; i++) 
+    {
+        free(*tokens[i]);
+    }
+    
+    free(*tokens);
+
+    *tokens = NULL;
+
 }
